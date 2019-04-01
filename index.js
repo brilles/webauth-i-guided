@@ -74,13 +74,24 @@ function restricted(req, res, next) {
 // axios.get(url, { headers: {username, pasword}})
 
 // protect this route, only authenticated users should see it
-server.get('/api/users', restricted, (req, res) => {
+server.get('/api/users', restricted, only('frodo'), (req, res) => {
+  // roles(['sales', 'admin', 'marketing']
   Users.find()
     .then(users => {
       res.json(users);
     })
     .catch(err => res.send(err));
 });
+
+function only(username) {
+  return function(req, res, next) {
+    if (username === req.headers.username) {
+      next();
+    } else {
+      res.status(403).json({ message: `you are not ${username}` });
+    }
+  };
+}
 
 const port = process.env.PORT || 5000;
 server.listen(port, () => console.log(`\n** Running on port ${port} **\n`));
