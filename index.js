@@ -3,6 +3,7 @@ const helmet = require('helmet');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const session = require('express-session'); //1
+const configuredKnex = require('./database/dbConfig.js');
 const KnexSessionStore = require('connect-session-knex')(session);
 // KnexSessionStore returns a function that you call passing session which returns another function
 
@@ -12,20 +13,21 @@ const Users = require('./users/users-model.js');
 const server = express();
 
 const sessionConfig = {
-  //3
-  name: 'monkey',
-  secret: 'keep it secret, keep it safe',
+  name: 'monster',
+  secret: 'keep it secret, keep it safe!',
   cookie: {
-    maxAge: 1000 * 60 * 60, // in ms
-    secure: false // used over https only (true on deploy)
+    maxAge: 1000 * 60 * 10, // ms
+    secure: false, // use cookie over https
+    httpOnly: true // can JS access the cookie on the client
   },
-  httpOnly: true, // cannot the user access the cookie from js using document.cookie
-  resave: false,
-  saveUninitialized: false, // GDPR laws against setting cookies automatically
+  resave: false, // avoid recreating existing sessions
+  saveUninitialized: false, // GDPR compliance
   store: new KnexSessionStore({
-    knex: db,
+    knex: configuredKnex,
     tablename: 'sessions',
-    createtable: true
+    sidfieldname: 'sid',
+    createtable: true,
+    clearInterval: 1000 * 60 * 30 // delete expired sessions
   })
 };
 
@@ -129,21 +131,21 @@ function only(username) {
 }
 
 // invalidates the session
-server.get('/api/logout', (req, res) => {
+server.get('/logout', (req, res) => {
   if (req.session) {
     req.session.destroy(err => {
       if (err) {
-        res.send('You can checkout');
+        res.status(500).json({ message: 'cant leave' });
       } else {
-        res.send('Bye');
+        res.status(200).json({ message: 'bye' });
       }
     });
   } else {
-    res.end();
+    res.status(200).json({ message: 'bye' });
   }
 });
 
 // refresh server
 
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 7000;
 server.listen(port, () => console.log(`\n** Running on port ${port} **\n`));
